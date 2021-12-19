@@ -23,7 +23,7 @@ describe('校验validRules', () => {
         expect(validRules('js.ts').isValid).toBeFalsy();
     });
     test('正确分隔符测试: ,', () => {
-        expect(validRules('js,ts').isValid).toBeTruthy();
+        expect(validRules('jpg,psd').isValid).toBeTruthy();
     });
     test('单个错误格式测试: ,js', () => {
         expect(validRules(',js').isValid).toBeFalsy();
@@ -39,15 +39,15 @@ describe('校验validRules', () => {
     });
 });
 
-describe('校验validType', () => {
-    let { validType } = Validator;
+describe('校验validMode', () => {
+    let { validMode } = Validator;
     test('传入正确值测试：filter', () => {
-        expect(validType('filter').isValid).toBeTruthy();
+        expect(validMode('filter').isValid).toBeTruthy();
     });
     test('传入正确值测试：ignore', () => {
-        expect(validType('ignore').isValid).toBeTruthy();
+        expect(validMode('ignore').isValid).toBeTruthy();
     });
     test('传入正确值测试：xxx', () => {
-        expect(validType('xxx').isValid).toBeFalsy();
+        expect(validMode('xxx').isValid).toBeFalsy();
     });
 });
