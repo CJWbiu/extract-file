@@ -1,103 +1,123 @@
 const path = require('path');
 const fs = require('fs');
-const ExtractTool = require('./util/extract-tool');
-const { formatterArgs } = require('./util/formatter');
-const { isDirectory } = require('./util/validator');
+const { validParams } = require('./util/validator');
+const { MODE } = require('./const');
 
-function emptyDir (pathName, rmdir) {
+/**
+ * 是否排除该文件
+ * @param {String} rules 
+ * @param {String} file 
+ * @param {String} mode filter|ignore
+ * @returns {Boolean}
+ */
+function __isIgnore (rules, file, mode = MODE.filter) {
+    if (!rules) {
+        return false;
+    }
+
+    rules = (rules || '').split(',');
+
+    const ext = path.extname(file).slice(1);
+
+    if (mode === MODE.ignore) {
+        return rules.includes(ext);
+    }
+
+    if (mode === MODE.filter) {
+        return !rules.includes(ext);
+    }
+
+    return true;
+}
+
+/**
+ * 遍历文件夹所有文件
+ * @param {String} dirPath 
+ * @param {Function} callback 
+ */
+function traverseDir (dirPath, callback) {
+    if (
+        typeof(dirPath) !== 'string' ||
+        typeof(callback) !== 'function'
+    ) {
+        throw new Error('请输入正确的参数！');
+    }
+
     let files = [];
 
-    if (fs.existsSync(pathName)) {
+    try {
+        files = fs.readdirSync(dirPath);
+    } catch (error) {
+        console.log(`读取文件夹${dirPath}失败：error`);
+        return;
+    }
+
+    files.forEach(file => {
+        let filePath = path.join(dirPath, file);
+
         try {
-            files = fs.readdirSync(pathName);
+            let stat = fs.statSync(filePath);   
+            
+            if (stat.isDirectory()) {
+                traverseDir(filePath, callback);
+                return;
+            }
+
+            if (stat.isFile()) {
+                callback && callback(filePath);
+            }
         } catch (error) {
-            console.log(`读取文件夹${pathName}失败：${error}`);
+            console.log(`获取路径stat失败：${error}`);
+        }
+    });
+}
+
+/**
+ * 移动文件
+ * @param {String} file 
+ * @param {String} dest 
+ */
+function moveFile (file, dest) {
+    if (!file || !dest) {
+        throw new Error('参数不能为空！');
+    }
+
+    let readStream = fs.createReadStream(file);
+
+    readStream.pipe(fs.createWriteStream(path.join(dest, path.basename(file))));
+    readStream.on('end', () => {
+        console.log(`拷贝文件${file}成功！`);
+    });
+    readStream.on('error', (error) => {
+        console.log(`拷贝文件${file}失败：${error}！`);
+    });
+}
+
+/**
+ * 提取文件
+ * @param {Object} config 自定义配置
+ */
+function extractFiles (config) {
+    let { isValid, msg } = validParams(config);
+
+    if (!isValid) {
+        throw new Error(msg);
+    }
+
+    const { src, dest, rules, mode } = config;
+
+    traverseDir(src, (file) => {
+
+        if (__isIgnore(rules, file, mode)) {
             return;
         }
 
-        files.forEach((file) => {
-            let curPath = pathName + "/" + file;
-
-            if (isDirectory(curPath)) {
-                emptyDir(curPath);
-            } else {
-                try {
-                    fs.unlinkSync(curPath);
-                } catch (error) {
-                    console.log(`删除文件${curPath}失败：${error}`);
-                    return;
-                }
-            }
-        });
-        
-        try {
-            rmdir && fs.rmdirSync(pathName);
-        } catch (error) {
-            console.log(`删除文件夹${pathName}失败：${error}`);
-        }
-    }
+        moveFile(file, dest);
+    });
 }
 
-function doEmpty (args) {
-    let errMsg = `指令错误，如果想执行empty操作，指令如下：node index empty [pathName] --rmdir`;
-
-    if (args[0] !== 'empty') {
-        console.log(errMsg);
-        return;
-    }
-
-    let pathName = args[1];
-
-    if (!isDirectory(pathName)) {
-        console.log(`请输入正确的文件夹路径！`);
-        return;
-    }
-
-    let rmdir = args[2] === '--rmdir';
-
-    emptyDir(pathName, rmdir);
-}
-
-function main () {
-    let args = process.argv.splice(2);
-
-    // 执行清空操作
-    if (args.includes('empty')) {
-        doEmpty(args);
-        return;
-    }
-
-    let argConfig = formatterArgs(args);
-
-    if (!argConfig.valid) {
-        console.log(argConfig.errText);
-        return;
-    }
-
-    let defaultConfig = {};
-    
-    try {
-        defaultConfig = fs.readFileSync('./config.json', 'utf-8');
-        defaultConfig = JSON.parse(defaultConfig);
-    } catch (error) {
-        console.log(`获取默认配置失败：${error}`);
-    }
-    
-    let config = {
-        ...defaultConfig,
-        ...argConfig.data
-    };
-
-    let extractTool;
-
-    try {
-        extractTool = new ExtractTool(config);
-    } catch (error) {
-        console.log(`初始化工具失败：${error.message}`);
-        return;
-    }
-
-    extractTool.extractFiles();
-}
-
-main();
+module.exports = {
+    extractFiles,
+    moveFile,
+    traverseDir
+};

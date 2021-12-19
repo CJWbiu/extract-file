@@ -1,14 +1,24 @@
 {
-  "name": "move-file",
+  "name": "extract-file",
   "version": "1.0.0",
-  "description": "",
+  "description": "Extract the file",
   "main": "index.js",
+  "bin": {
+    "extract": "cli.js"
+  },
+  "keywords": [
+    "npm cli",
+    "extract file"
+  ],
   "scripts": {
     "test": "jest"
   },
-  "author": "",
+  "author": "cjw_biu <1919064252@qq.com>",
   "license": "ISC",
   "devDependencies": {
     "jest": "^26.6.3"
+  },
+  "dependencies": {
+    "commander": "^8.3.0"
   }
 }

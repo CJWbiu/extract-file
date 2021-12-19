@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { MODE } = require('../const');
 
 function isDirectory (pathName) {
     try {
@@ -37,7 +38,7 @@ function validDestPath (pathName) {
 }
 
 function validRules (rules) {
-    let pattern = /^[a-z]{2,}(,[a-z]{2}){0,}$/;
+    let pattern = /^[a-zA-Z]+(,[a-zA-Z]+){0,}$/;
 
     if (!pattern.test(rules)) {
         return {
@@ -49,12 +50,13 @@ function validRules (rules) {
     return { isValid: true };
 }
 
-function validType (type) {
-    return ['filter', 'ignore'].includes(type) ?
+function validMode (mode) {
+    const supportVals = Object.values(MODE);
+    return supportVals.includes(mode) ?
         { isValid: true } :
         { 
             isValid: false, 
-            msg: `type只支持filter或ignore` 
+            msg: `mode只支持${supportVals.join('，')}` 
         };
 }
 
@@ -77,11 +79,67 @@ function validRequired (config, validConfig) {
         { isValid: true };
 }
 
+/**
+ * 校验配置
+ * @param {Object} config 
+ * @returns {Boolean}
+ */
+function validParams (config) {
+    let validConfig = {
+        src: {
+            validFn: validSrcPath,
+            required: true
+        },
+        dest: {
+            validFn: validDestPath,
+            required: true
+        },
+        mode: {
+            validFn: validMode,
+        },
+        rules: {
+            validFn: validRules,
+            required: true
+        }
+    };
+
+    // 校验必填项
+    let validRes = validRequired(config, validConfig);
+    
+    if (!validRes.isValid) {
+        return validRes;
+    }
+    
+    let result = [];
+
+    Object.keys(config).forEach(key => {
+        let { validFn } = validConfig[key];
+    
+        if (validFn && config[key]) {
+            let { isValid, msg } = validFn(config[key]);
+
+            if (!isValid) {
+                result.push(msg);
+            }
+        }
+    });
+
+    if (result.length) {
+        return {
+            isValid: false,
+            msg: `参数填写错误：\n ${result.join('\n')}`
+        };
+    }
+    
+    return { isValid: true };
+}
+
 module.exports = {
     isDirectory,
     validSrcPath,
     validDestPath,
     validRules,
-    validType,
-    validRequired
+    validMode,
+    validRequired,
+    validParams
 };
