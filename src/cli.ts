@@ -1,10 +1,9 @@
-#!/usr/bin/env node
-
-const { program } = require('commander');
-const { extractFiles } = require('./index');
-const { validParams } = require('./util/validator');
-const { MODE } = require('./const');
-const { version } = require('./package.json');
+import { program } from 'commander';
+import { extractFiles } from './index';
+import { validParams } from './util/validator';
+import { MODE } from './enum';
+import { version } from '../package.json';
+import { ExtractParams } from './interface';
 
 function getCommandOpts () {
     program
@@ -15,7 +14,7 @@ function getCommandOpts () {
         .requiredOption('-m, --mode <mode>', '提取模式', MODE.filter)
         .parse();
     
-    return program.opts();
+    return program.opts() as ExtractParams;
 }
 
 function main () {

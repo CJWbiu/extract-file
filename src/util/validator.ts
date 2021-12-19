@@ -1,7 +1,16 @@
-const fs = require('fs');
-const { MODE } = require('../const');
+import fs from 'fs';
+import { MODE } from '../enum';
+import { ExtractParams } from '../interface';
 
-function isDirectory (pathName) {
+interface ValidConfig {
+    [x: string]: {
+        validFn: (param: any) => { isValid: boolean, msg?: string },
+        required?: boolean
+    }
+}
+type ExtractParamsKey = keyof ExtractParams;
+
+function isDirectory (pathName: string) {
     try {
         let stat = fs.statSync(pathName);
 
@@ -15,7 +24,7 @@ function isDirectory (pathName) {
     }
 } 
 
-function validSrcPath (pathName) {
+function validSrcPath (pathName: string) {
     if (isDirectory(pathName)) {
         return { isValid: true };
     } 
@@ -26,7 +35,7 @@ function validSrcPath (pathName) {
     };
 }
 
-function validDestPath (pathName) {
+function validDestPath (pathName: string) {
     if (isDirectory(pathName)) {
         return { isValid: true };
     } 
@@ -37,7 +46,7 @@ function validDestPath (pathName) {
     };
 }
 
-function validRules (rules) {
+function validRules (rules: string) {
     let pattern = /^[a-zA-Z]+(,[a-zA-Z]+){0,}$/;
 
     if (!pattern.test(rules)) {
@@ -50,7 +59,7 @@ function validRules (rules) {
     return { isValid: true };
 }
 
-function validMode (mode) {
+function validMode (mode: MODE) {
     const supportVals = Object.values(MODE);
     return supportVals.includes(mode) ?
         { isValid: true } :
@@ -60,13 +69,16 @@ function validMode (mode) {
         };
 }
 
-function validRequired (config, validConfig) {
-    let result = [];
+function validRequired (
+    config: ExtractParams, 
+    validConfig: ValidConfig
+) {
+    let result: string[] = [];
 
     Object.keys(config).forEach(key => {
         let { required } = validConfig[key];
 
-        if (required && !config[key]) {
+        if (required && !config[key as ExtractParamsKey]) {
             result.push(key);
         }
     });
@@ -74,7 +86,7 @@ function validRequired (config, validConfig) {
     return result.length ? 
         {
             isValid: false,
-            msg: `缺失必要参数：${missings.join(',')}`
+            msg: `缺失必要参数：${result.join(',')}`
         } : 
         { isValid: true };
 }
@@ -84,8 +96,8 @@ function validRequired (config, validConfig) {
  * @param {Object} config 
  * @returns {Boolean}
  */
-function validParams (config) {
-    let validConfig = {
+function validParams (config: ExtractParams) {
+    const validConfig: ValidConfig = {
         src: {
             validFn: validSrcPath,
             required: true
@@ -104,22 +116,23 @@ function validParams (config) {
     };
 
     // 校验必填项
-    let validRes = validRequired(config, validConfig);
+    const validRes = validRequired(config, validConfig);
     
     if (!validRes.isValid) {
         return validRes;
     }
     
-    let result = [];
+    let result: string[] = [];
 
     Object.keys(config).forEach(key => {
-        let { validFn } = validConfig[key];
+        const { validFn } = validConfig[key];
+        const configVal = config[key as ExtractParamsKey];
     
-        if (validFn && config[key]) {
-            let { isValid, msg } = validFn(config[key]);
+        if (validFn && configVal) {
+            let { isValid, msg } = validFn(configVal);
 
             if (!isValid) {
-                result.push(msg);
+                result.push(msg || '');
             }
         }
     });
@@ -134,7 +147,7 @@ function validParams (config) {
     return { isValid: true };
 }
 
-module.exports = {
+export {
     isDirectory,
     validSrcPath,
     validDestPath,

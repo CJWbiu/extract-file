@@ -1,7 +1,6 @@
-/dest/*
-/test-dir/*
-/config.json
+/lib/*
 /node_modules
 .DS_Store
 launch.json
 .vscode
+package-lock.json
