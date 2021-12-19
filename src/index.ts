@@ -1,22 +1,26 @@
-const path = require('path');
-const fs = require('fs');
-const { validParams } = require('./util/validator');
-const { MODE } = require('./const');
+import path from 'path';
+import fs from 'fs';
+import { validParams } from './util/validator';
+import { MODE } from './enum';
+import { ExtractParams } from './interface';
 
 /**
  * 是否排除该文件
- * @param {String} rules 
+ * @param {String} rulesStr 
  * @param {String} file 
  * @param {String} mode filter|ignore
  * @returns {Boolean}
  */
-function __isIgnore (rules, file, mode = MODE.filter) {
-    if (!rules) {
+function __isIgnore (
+    rulesStr: string, 
+    file: string, 
+    mode: MODE = MODE.filter
+): boolean {
+    if (!rulesStr) {
         return false;
     }
 
-    rules = (rules || '').split(',');
-
+    const rules = (rulesStr || '').split(',');
     const ext = path.extname(file).slice(1);
 
     if (mode === MODE.ignore) {
@@ -35,7 +39,10 @@ function __isIgnore (rules, file, mode = MODE.filter) {
  * @param {String} dirPath 
  * @param {Function} callback 
  */
-function traverseDir (dirPath, callback) {
+function traverseDir (
+    dirPath: string, 
+    callback: (file: string) => void
+) {
     if (
         typeof(dirPath) !== 'string' ||
         typeof(callback) !== 'function'
@@ -53,10 +60,10 @@ function traverseDir (dirPath, callback) {
     }
 
     files.forEach(file => {
-        let filePath = path.join(dirPath, file);
+        const filePath = path.join(dirPath, file);
 
         try {
-            let stat = fs.statSync(filePath);   
+            const stat = fs.statSync(filePath);   
             
             if (stat.isDirectory()) {
                 traverseDir(filePath, callback);
@@ -77,12 +84,12 @@ function traverseDir (dirPath, callback) {
  * @param {String} file 
  * @param {String} dest 
  */
-function moveFile (file, dest) {
+function moveFile (file: string, dest: string) {
     if (!file || !dest) {
         throw new Error('参数不能为空！');
     }
 
-    let readStream = fs.createReadStream(file);
+    const readStream = fs.createReadStream(file);
 
     readStream.pipe(fs.createWriteStream(path.join(dest, path.basename(file))));
     readStream.on('end', () => {
@@ -95,10 +102,10 @@ function moveFile (file, dest) {
 
 /**
  * 提取文件
- * @param {Object} config 自定义配置
+ * @param {ExtractParams} config 自定义配置
  */
-function extractFiles (config) {
-    let { isValid, msg } = validParams(config);
+function extractFiles (config: ExtractParams) {
+    const { isValid, msg } = validParams(config);
 
     if (!isValid) {
         throw new Error(msg);
@@ -116,7 +123,7 @@ function extractFiles (config) {
     });
 }
 
-module.exports = {
+export {
     extractFiles,
     moveFile,
     traverseDir
